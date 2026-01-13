@@ -1,0 +1,4 @@
+{
+    "migrations_dir": "./db/migrations",
+    "schema_file": "./db/schema.sql"
+  }
