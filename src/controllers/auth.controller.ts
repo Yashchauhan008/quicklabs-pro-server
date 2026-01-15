@@ -1,13 +1,16 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { logger } from '../config/logger';
+import { RegisterInput, LoginInput } from '../validators/auth.schema';
 
 export class AuthController {
   static async register(req: Request, res: Response): Promise<void> {
     try {
-      const { name, email, password } = req.body;
+      // Request body is already validated and typed by Zod middleware
+      const data = req.body as RegisterInput;
 
-      const { user, token } = await AuthService.register({ name, email, password });
+      // AuthService.register returns { user: User; token: string }
+      const { user, token } = await AuthService.register(data);
 
       logger.info('User registered successfully', { userId: user.id, email: user.email });
 
@@ -36,9 +39,11 @@ export class AuthController {
 
   static async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      // Request body is already validated and typed by Zod middleware
+      const data = req.body as LoginInput;
 
-      const { user, token } = await AuthService.login({ email, password });
+      // AuthService.login returns { user: User; token: string }
+      const { user, token } = await AuthService.login(data);
 
       logger.info('User logged in successfully', { userId: user.id, email: user.email });
 
