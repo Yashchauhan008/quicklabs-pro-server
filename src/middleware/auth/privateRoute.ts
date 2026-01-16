@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/auth.service';
-import { logger } from '../config/logger';
+import { verifyToken } from '../../utils/jwtToken';
+import logger from '../../service/logger';
 
-export const authenticate = async (
+export default async function privateRoute(
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> => {
+): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
 
@@ -19,17 +19,17 @@ export const authenticate = async (
     }
 
     const token = authHeader.substring(7);
+    const payload = verifyToken(token);
 
-    const { userId } = AuthService.verifyToken(token);
-    (req as any).userId = userId;
-
+    // ✅ Type assertion as workaround
+    (req as any).user = payload;
+    
     next();
   } catch (error: any) {
     logger.error('Authentication error', { error: error.message });
-
     res.status(401).json({
       success: false,
       message: 'Invalid or expired token',
     });
   }
-};
+}

@@ -1,43 +1,41 @@
-import express, { Application } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+import express from 'express';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
-import routes from './routes';
-import { errorHandler, notFound } from './middleware/errorHandler.middleware';
-import { logger } from './config/logger';
+import cors from 'cors';
+import Logger from './service/logger';
+import errorHandler from './middleware/errorHandler';
+import appRoute from './routes/app.route';
+import Vars from './config/var';
 
-const app: Application = express();
+const app = express();
 
-// Security middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true,
-}));
+app.use(
+  morgan(':method :url Status: :status, Time taken: :response-time ms', {
+    stream: { write: (message) => Logger.info(message) },
+  })
+);
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-  message: { success: false, message: 'Too many requests' },
+app.use(cors({ origin: true, credentials: true }));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const serverStartTimeStamp = new Date().toISOString();
+
+app.get('/ping', (_req, res) => {
+  res.status(200).send('pong');
 });
-app.use('/api/', limiter);
 
-// Logging
-app.use(morgan('combined', {
-  stream: { write: (message) => logger.info(message.trim()) },
-}));
+app.get('/status', (_req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    version: Vars.version,
+    startTime: serverStartTimeStamp,
+    service: Vars.serviceName,
+  });
+});
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/api', appRoute);
 
-// Routes
-app.use('/api', routes);
-
-// Error handling
-app.use(notFound);
 app.use(errorHandler);
 
 export default app;

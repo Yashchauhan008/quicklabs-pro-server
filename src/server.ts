@@ -1,21 +1,20 @@
 import dotenv from 'dotenv';
 import app from './app';
-import { pool } from './config/database';
-import { logger } from './config/logger';
+import { pool } from './service/database';
+import logger from './service/logger';
+import env from './config/env';
 import fs from 'fs';
 import path from 'path';
 
 dotenv.config();
 
-// Create logs directory
 const logsDir = path.join(__dirname, '..', 'logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir);
 }
 
-const PORT = process.env.PORT || 5001;
+const PORT = env.server.port;
 
-// Test database connection
 pool.query('SELECT NOW()', (err: Error | null) => {
   if (err) {
     logger.error('Database connection failed', { error: err.message });
@@ -24,14 +23,12 @@ pool.query('SELECT NOW()', (err: Error | null) => {
   logger.info('Database connected successfully');
 });
 
-// Start server
 const server = app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
-  logger.info(`Environment: ${process.env.NODE_ENV}`);
-  logger.info(`API available at http://localhost:${PORT}/api`);
+  logger.info(`Environment: ${env.server.nodeEnv}`);
+  logger.info(`API available at http://${env.server.host}:${PORT}/api`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, closing server...');
   server.close(() => {
