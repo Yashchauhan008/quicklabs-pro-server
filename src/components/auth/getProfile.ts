@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { DatabaseClient } from '../../service/database';
+import { DatabaseClient } from '@service/database';
 
 export const Controller = async (
   req: Request,

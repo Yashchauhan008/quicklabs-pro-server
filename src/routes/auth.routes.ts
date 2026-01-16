@@ -1,7 +1,7 @@
 import express from 'express';
-import WithDatabase from '../utils/withDatabase';
-import { validate } from '../utils/validationHelper';
-import privateRoute from '../middleware/auth/privateRoute';
+import WithDatabase from '@utils/withDatabase';
+import { validate } from '@utils/validationHelper';
+import privateRoute from '@middleware/auth/privateRoute';
 
 import {
   ValidationSchema as LoginValidationSchema,

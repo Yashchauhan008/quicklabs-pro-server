@@ -1,8 +1,9 @@
+import 'tsconfig-paths/register';  // ← ADD THIS LINE
 import dotenv from 'dotenv';
 import app from './app';
-import { pool } from './service/database';
-import logger from './service/logger';
-import env from './config/env';
+import { pool } from '@service/database';
+import logger from '@service/logger';
+import env from '@config/env';
 import fs from 'fs';
 import path from 'path';
 

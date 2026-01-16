@@ -1,10 +1,10 @@
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
-import Logger from './service/logger';
-import errorHandler from './middleware/errorHandler';
-import appRoute from './routes/app.route';
-import Vars from './config/var';
+import Logger from '@service/logger';
+import errorHandler from '@middleware/errorHandler';
+import appRoute from '@routes/app.route';
+import Vars from '@config/var';
 
 const app = express();
 

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
-import { DatabaseClient } from '../../service/database';
-import { comparePassword } from '../../utils/password';
-import { generateToken } from '../../utils/jwtToken';
-import logger from '../../service/logger';
+import { DatabaseClient } from '@service/database';
+import { comparePassword } from '@utils/password';
+import { generateToken } from '@utils/jwtToken';
+import logger from '@service/logger';
 
 export const ValidationSchema = {
   body: z.object({
@@ -17,7 +17,7 @@ export const Controller = async (
   res: Response,
   _next: NextFunction,
   db: DatabaseClient
-): Promise<void> => {  // ✅ Explicit void return
+): Promise<void> => { 
   const { email, password } = req.body;
 
   const user = await db.queryOne(
@@ -31,7 +31,7 @@ export const Controller = async (
       success: false,
       message: 'Invalid credentials',
     });
-    return;  // ✅ Just return, don't return res.json()
+    return;  
   }
 
   const isValidPassword = await comparePassword(password, user.password_hash);
@@ -61,5 +61,4 @@ export const Controller = async (
       token,
     },
   });
-  // ✅ No return statement
 };

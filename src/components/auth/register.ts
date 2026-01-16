@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
-import { DatabaseClient } from '../../service/database';
-import { hashPassword } from '../../utils/password';
-import { generateToken } from '../../utils/jwtToken';
-import logger from '../../service/logger';
+import { DatabaseClient } from '@service/database';
+import { hashPassword } from '@utils/password';
+import { generateToken } from '@utils/jwtToken';
+import logger from '@service/logger';
 
 export const ValidationSchema = {
   body: z.object({

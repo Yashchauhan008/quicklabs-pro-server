@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
-import logger from '../service/logger';
+import logger from '@service/logger';
 
 interface ValidationSchemas {
   body?: z.ZodTypeAny;

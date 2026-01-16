@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { pool, DatabaseClient } from '../service/database';
-import logger from '../service/logger';
+import { pool, DatabaseClient } from '@service/database';
+import logger from '@service/logger';
 
 type ControllerFunction = (
   req: Request,

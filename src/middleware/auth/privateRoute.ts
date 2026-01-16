@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../../utils/jwtToken';
-import logger from '../../service/logger';
+import { verifyToken } from '@utils/jwtToken';
+import logger from '@service/logger';
 
 export default async function privateRoute(
   req: Request,

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { DatabaseClient } from '../../service/database';
-import logger from '../../service/logger';
+import { DatabaseClient } from '@service/database';
+import logger from '@service/logger';
 
 export const Controller = async (
   req: Request,
