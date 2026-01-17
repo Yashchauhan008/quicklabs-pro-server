@@ -2,7 +2,7 @@ import express from 'express';
 import WithDatabase from '@utils/withDatabase';
 import { validate } from '@utils/validationHelper';
 import privateRoute from '@middleware/auth/privateRoute';
-import documentUpload from '@config/multer/documentUpload';
+import documentUpload from '@middleware/multer/documentUpload';
 
 import {
   ValidationSchema as UploadDocumentValidationSchema,
