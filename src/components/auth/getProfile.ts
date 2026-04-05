@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { DatabaseClient } from '@service/database';
+import { pinnedPeersFromBookmarks } from '../student/peerBookmarkQueries';
+import { userProfileWithPictureSql } from '../user/userProfileSelect';
+import { stripProfilePictureKey } from '@utils/profilePictureUrl';
 
 export const Controller = async (
   req: Request,
@@ -7,14 +10,9 @@ export const Controller = async (
   _next: NextFunction,
   db: DatabaseClient
 ): Promise<void> => {
-  // ✅ Type assertion
-  const user = (req as any).user;
-  const userId = user?.userId;
+  const userId = req.user?.userId;
 
-  const userRecord = await db.queryOne(
-    'SELECT id, name, email, created_at, updated_at FROM users WHERE id = $1',
-    [userId]
-  );
+  const userRecord = await db.queryOne(userProfileWithPictureSql, [userId]);
 
   if (!userRecord) {
     res.status(404).json({
@@ -24,8 +22,28 @@ export const Controller = async (
     return;
   }
 
+  const base = stripProfilePictureKey(userRecord as Record<string, unknown>);
+
+  if (userRecord.role === 'student') {
+    const pinnedRows = await db.queryMany(pinnedPeersFromBookmarks, [userId]);
+    const pinned_peers = pinnedRows.map((r) =>
+      stripProfilePictureKey(r as Record<string, unknown>)
+    );
+    res.status(200).json({
+      success: true,
+      data: {
+        ...base,
+        pinned_peers,
+      },
+    });
+    return;
+  }
+
   res.status(200).json({
     success: true,
-    data: userRecord,
+    data: {
+      ...base,
+      pinned_peers: [],
+    },
   });
 };

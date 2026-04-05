@@ -31,7 +31,7 @@ export const Controller = async (
     LEFT JOIN users u ON s.created_by = u.id
     LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
     WHERE s.id = $1 AND s.deleted_at IS NULL
-    GROUP BY s.id, u.name, u.email`,
+    GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at, u.name, u.email`,
     [id]
   );
 
@@ -43,14 +43,14 @@ export const Controller = async (
     return;
   }
 
-  // Get recent documents for this subject
-  const user = (req as any).user;
+  const user = req.user;
   const userId = user?.userId;
 
   const recentDocuments = await db.queryMany(
     `SELECT 
       d.id,
       d.title,
+      d.kind,
       d.visibility,
       d.download_count,
       d.created_at,

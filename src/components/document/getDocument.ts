@@ -14,7 +14,7 @@ export const Controller = async (
   _next: NextFunction,
   db: DatabaseClient
 ): Promise<void> => {
-  const user = (req as any).user;
+  const user = req.user;
   const userId = user?.userId;
   const { id } = req.params;
 
@@ -26,7 +26,9 @@ export const Controller = async (
       u.email as uploader_email,
       f.key as file_key,
       f.size as file_size,
-      f.mime_type as file_mime_type
+      f.mime_type as file_mime_type,
+      (SELECT COALESCE(ROUND(AVG(dr.stars)::numeric, 2), 0) FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_avg,
+      (SELECT COUNT(*)::int FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_count
     FROM documents d
     LEFT JOIN subjects s ON d.subject_id = s.id
     LEFT JOIN users u ON d.uploaded_by = u.id

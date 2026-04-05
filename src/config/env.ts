@@ -20,6 +20,10 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('debug'),
+
+  MAX_SUBJECTS_PER_STUDENT: z.string().default('2').transform(Number),
+  MAX_UPLOADS_PER_DAY_STUDENT: z.string().default('10').transform(Number),
+  MAX_DOWNLOADS_PER_DAY: z.string().default('50').transform(Number),
 });
 
 function validateEnv() {
@@ -63,6 +67,11 @@ const env = {
   },
   logging: {
     level: validatedEnv.LOG_LEVEL,
+  },
+  studentLimits: {
+    maxSubjects: validatedEnv.MAX_SUBJECTS_PER_STUDENT,
+    maxUploadsPerDay: validatedEnv.MAX_UPLOADS_PER_DAY_STUDENT,
+    maxDownloadsPerDay: validatedEnv.MAX_DOWNLOADS_PER_DAY,
   },
 } as const;
 

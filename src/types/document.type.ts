@@ -1,4 +1,5 @@
 export type DocumentVisibility = 'PUBLIC' | 'PRIVATE';
+export type DocumentKind = 'informational' | 'lab_solutions';
 
 export interface Document {
   id: string;
@@ -6,6 +7,7 @@ export interface Document {
   file_id: string;
   title: string;
   description: string | null;
+  kind: DocumentKind;
   visibility: DocumentVisibility;
   uploaded_by: string;
   download_count: number;
@@ -19,12 +21,14 @@ export interface CreateDocumentDTO {
   file_id: string;
   title: string;
   description?: string;
+  kind?: DocumentKind;
   visibility?: DocumentVisibility;
 }
 
 export interface UpdateDocumentDTO {
   title?: string;
   description?: string;
+  kind?: DocumentKind;
   visibility?: DocumentVisibility;
   file_id?: string;
 }
@@ -42,6 +46,7 @@ export interface DocumentListItem {
   id: string;
   title: string;
   description: string | null;
+  kind: DocumentKind;
   visibility: DocumentVisibility;
   download_count: number;
   created_at: Date;

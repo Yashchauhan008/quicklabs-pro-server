@@ -1,9 +1,11 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import env from '@config/env';
+import type { UserRole } from '../types/role.type';
 
 export interface JWTPayload {
   userId: string;
   email: string;
+  role: UserRole;
 }
 
 export const generateToken = (payload: JWTPayload): string => {

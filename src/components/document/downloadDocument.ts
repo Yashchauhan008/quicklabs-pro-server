@@ -4,6 +4,13 @@ import { DatabaseClient } from '@service/database';
 import { getFilePath } from '@service/file-storage';
 import fs from 'fs';
 import path from 'path';
+import {
+  advisoryLockUser,
+  incrementDailyDownloads,
+  isStudentRole,
+  limits,
+  selectDailyUsageForUpdate,
+} from '@utils/studentQuota';
 
 export const ValidationSchema = {
   params: z.object({
@@ -17,8 +24,9 @@ export const Controller = async (
   _next: NextFunction,
   db: DatabaseClient
 ): Promise<void> => {
-  const user = (req as any).user;
+  const user = req.user;
   const userId = user?.userId;
+  const role = user?.role;
   const { id } = req.params;
 
   const document = await db.queryOne(
@@ -57,7 +65,28 @@ export const Controller = async (
     return;
   }
 
-  // Increment download count
+  if (isStudentRole(role)) {
+    await db.query('BEGIN');
+    try {
+      await advisoryLockUser(db, userId!);
+      const usage = await selectDailyUsageForUpdate(db, userId!);
+      const downloads = usage?.downloads_count ?? 0;
+      if (downloads >= limits().maxDownloadsPerDay) {
+        await db.query('ROLLBACK');
+        res.status(429).json({
+          success: false,
+          message: `Daily download limit reached (${limits().maxDownloadsPerDay} downloads per day)`,
+        });
+        return;
+      }
+      await incrementDailyDownloads(db, userId!);
+      await db.query('COMMIT');
+    } catch (err) {
+      await db.query('ROLLBACK');
+      throw err;
+    }
+  }
+
   await db.query(
     'UPDATE documents SET download_count = download_count + 1 WHERE id = $1',
     [id]

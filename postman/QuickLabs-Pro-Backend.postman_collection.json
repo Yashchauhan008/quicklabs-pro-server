@@ -1,0 +1,470 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "QuickLabs Pro Backend",
+    "description": "API collection for quicklabs-pro backend (Express + PostgreSQL). Default port from env is 5001.\n\n**Auth:** After Register or Login, `token` and `api_scope` (`admin` or `students`) are set from the response.\n\n**Subjects & documents** live under `/api/admin/...` or `/api/students/...` — call the path that matches the user's `role`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5001" },
+    { "key": "token", "value": "" },
+    { "key": "subject_id", "value": "00000000-0000-4000-8000-000000000001" },
+    { "key": "document_id", "value": "00000000-0000-4000-8000-000000000002" },
+    { "key": "api_scope", "value": "students" },
+    { "key": "peer_student_id", "value": "00000000-0000-4000-8000-000000000003" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/ping",
+            "description": "Returns plain text `pong`."
+          }
+        },
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/status",
+            "description": "JSON: status, version, startTime, service."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}",
+                  "if (json && json.data && json.data.user && json.data.user.role) {",
+                  "  pm.collectionVariables.set('api_scope', json.data.user.role === 'admin' ? 'admin' : 'students');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"secret12\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/register",
+            "description": "Body: name (2–100), email, password (6–100). **201** — sets `token` via test script."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}",
+                  "if (json && json.data && json.data.user && json.data.user.role) {",
+                  "  pm.collectionVariables.set('api_scope', json.data.user.role === 'admin' ? 'admin' : 'students');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"secret12\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login",
+            "description": "**200** — `data.user`, `data.token`. Saves `token`."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/auth/logout",
+            "description": "JWT required. Stateless logout (client discards token)."
+          }
+        },
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/auth/profile",
+            "description": "**200** — `role`, `social_profiles`, `profile_picture_url` (or null). Students: `pinned_peers` with peer `profile_picture_url`. Admins: `pinned_peers: []`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student-only",
+      "description": "Requires student JWT. Paths are always under `/api/students/...` (not `{{api_scope}}`).",
+      "item": [
+        {
+          "name": "Upload profile picture",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "description": "Image: jpg, png, webp, etc. Max 5MB.",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{base_url}}/api/students/profile/picture",
+            "description": "Multipart field `file`. Replaces previous avatar. **200** — `data.profile_picture_url` is path like `/files/avatars/{key}` (prepend `base_url` for `<img src>`)."
+          }
+        },
+        {
+          "name": "Remove profile picture",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/students/profile/picture",
+            "description": "**404** if no picture set."
+          }
+        },
+        {
+          "name": "Patch profile (social links)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"social_profiles\": [\n    { \"key\": \"github\", \"value\": \"https://github.com/example\" },\n    { \"key\": \"twitter\", \"value\": \"https://x.com/example\" }\n  ]\n}"
+            },
+            "url": "{{base_url}}/api/students/profile",
+            "description": "Replace entire `social_profiles` array (max 30 entries). Response includes `profile_picture_url`."
+          }
+        },
+        {
+          "name": "Rate document",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stars\": 5\n}"
+            },
+            "url": "{{base_url}}/api/students/ratings/documents/{{document_id}}",
+            "description": "1–5 stars. One rating per user per document. Cannot rate own upload."
+          }
+        },
+        {
+          "name": "Rate student",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stars\": 4\n}"
+            },
+            "url": "{{base_url}}/api/students/ratings/students/{{peer_student_id}}",
+            "description": "Target must be a user with role `student`. One rating per pair."
+          }
+        },
+        {
+          "name": "Peer profile (ratings + social)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/students/peers/{{peer_student_id}}",
+            "description": "Public-ish directory: name, social_profiles, rating_avg, rating_count."
+          }
+        },
+        {
+          "name": "List pinned peers (bookmarks)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/students/bookmarks",
+            "description": "Array of pinned student profiles (same fields as peer profile + `pinned_at`). Order: newest pin first."
+          }
+        },
+        {
+          "name": "Pin peer (bookmark)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/students/bookmarks/{{peer_student_id}}",
+            "description": "**201** — peer must exist with role `student`. Cannot pin self. **409** if already pinned."
+          }
+        },
+        {
+          "name": "Unpin peer (remove bookmark)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/students/bookmarks/{{peer_student_id}}",
+            "description": "**404** if this peer was not pinned."
+          }
+        },
+        {
+          "name": "Create enquiry",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Need help with lab 3\",\n  \"message\": \"I need clarification on the submission format for experiment three.\"\n}"
+            },
+            "url": "{{base_url}}/api/students/enquiries",
+            "description": "Message min 10 chars."
+          }
+        },
+        {
+          "name": "List my enquiries",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/students/enquiries?page=1&limit=10",
+            "description": "Optional query: `status` = open | in_progress | resolved | closed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subjects",
+      "item": [
+        {
+          "name": "Create subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Biology 101\",\n  \"description\": \"Optional description up to 1000 chars\"\n}"
+            },
+            "url": "{{base_url}}/api/{{api_scope}}/subjects",
+            "description": "One subject can hold both informational and lab documents; classify each file on upload. Students: max 2 subjects (env)."
+          }
+        },
+        {
+          "name": "List subjects",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/subjects?page=1&limit=10",
+            "description": "Each row: `created_by` (creator UUID), `creator_id`, `creator_name`, `creator_email`, `creator_profile_picture_url` (path under `/files/avatars/...` or null). Query: `page`, `limit`, `search`, `created_by`."
+          }
+        },
+        {
+          "name": "Get subject by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/subjects/{{subject_id}}",
+            "description": "Replace `subject_id` variable with a real UUID from Create or List."
+          }
+        },
+        {
+          "name": "Update subject",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated name\",\n  \"description\": \"Optional\"\n}"
+            },
+            "url": "{{base_url}}/api/{{api_scope}}/subjects/{{subject_id}}",
+            "description": "All body fields optional; send at least one to update."
+          }
+        },
+        {
+          "name": "Delete subject (soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/subjects/{{subject_id}}",
+            "description": "Soft-deletes subject and its documents. Owner only."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Upload document",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "description": "Required. Allowed: pdf, doc/docx, xls/xlsx, ppt/pptx, txt, csv, images (jpg/png/webp/gif). Max 50MB.",
+                  "type": "file",
+                  "src": []
+                },
+                { "key": "subject_id", "type": "text", "value": "{{subject_id}}" },
+                { "key": "title", "type": "text", "value": "Lab report" },
+                { "key": "description", "type": "text", "value": "", "disabled": true },
+                { "key": "visibility", "type": "text", "value": "PRIVATE", "description": "PUBLIC or PRIVATE (default PRIVATE)" },
+                { "key": "kind", "type": "text", "value": "informational", "description": "informational | lab_solutions (default informational)" }
+              ]
+            },
+            "url": "{{base_url}}/api/{{api_scope}}/documents",
+            "description": "multipart: `file`, `subject_id`, `title`, optional `description`, `visibility`, `kind`."
+          }
+        },
+        {
+          "name": "List documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/documents?page=1&limit=10",
+            "description": "Each row: `uploader_id`, `uploader_name`, `uploader_email`, `uploader_profile_picture_url`. Query: `subject_id`, `kind`, `visibility`, `uploaded_by`, `search`, `page`, `limit`."
+          }
+        },
+        {
+          "name": "Get document by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/documents/{{document_id}}",
+            "description": "Set `document_id` from upload/list response."
+          }
+        },
+        {
+          "name": "Download document",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/documents/{{document_id}}/download",
+            "description": "File download. PRIVATE docs only for uploader. Increments download_count."
+          }
+        },
+        {
+          "name": "Update document (metadata + optional file)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true,
+                  "description": "Optional new file"
+                },
+                { "key": "title", "type": "text", "value": "New title" },
+                { "key": "description", "type": "text", "value": "", "disabled": true },
+                { "key": "visibility", "type": "text", "value": "PUBLIC", "disabled": true },
+                { "key": "kind", "type": "text", "value": "lab_solutions", "disabled": true, "description": "informational | lab_solutions" }
+              ]
+            },
+            "url": "{{base_url}}/api/{{api_scope}}/documents/{{document_id}}",
+            "description": "At least one of title, description, visibility, kind, or file. Form-data."
+          }
+        },
+        {
+          "name": "Delete document (soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/documents/{{document_id}}",
+            "description": "Default: soft delete (`deleted_at`)."
+          }
+        },
+        {
+          "name": "Delete document (permanent)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/{{api_scope}}/documents/{{document_id}}?permanent=true",
+            "description": "Query `permanent=true` removes DB row and file from disk. Uploader only."
+          }
+        }
+      ]
+    }
+  ]
+}

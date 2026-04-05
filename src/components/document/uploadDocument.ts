@@ -2,8 +2,15 @@ import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
 import { DatabaseClient } from '@service/database';
 import logger from '@service/logger';
-import { saveFile } from '@service/file-storage';
+import { deleteFile, saveFile } from '@service/file-storage';
 import fs from 'fs';
+import {
+  advisoryLockUser,
+  incrementDailyUploads,
+  isStudentRole,
+  limits,
+  selectDailyUsageForUpdate,
+} from '@utils/studentQuota';
 
 export const ValidationSchema = {
   body: z.object({
@@ -24,6 +31,7 @@ export const ValidationSchema = {
       })
       .optional()
       .default('PRIVATE'),
+    kind: z.enum(['informational', 'lab_solutions']).optional().default('informational'),
   }),
 };
 
@@ -33,11 +41,12 @@ export const Controller = async (
   _next: NextFunction,
   db: DatabaseClient
 ): Promise<void> => {
-  const user = (req as any).user;
+  const user = req.user;
   const userId = user?.userId;
+  const role = user?.role;
   const file = req.file;
 
-  const { subject_id, title, description, visibility } = req.body;
+  const { subject_id, title, description, visibility, kind } = req.body;
 
   if (!file) {
     res.status(400).json({
@@ -47,17 +56,20 @@ export const Controller = async (
     return;
   }
 
+  const cleanupTemp = (): void => {
+    if (file && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+  };
+
   try {
-    // Check if subject exists
     const subject = await db.queryOne(
       'SELECT id FROM subjects WHERE id = $1 AND deleted_at IS NULL',
       [subject_id]
     );
 
     if (!subject) {
-      if (fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
+      cleanupTemp();
       res.status(404).json({
         success: false,
         message: 'Subject not found',
@@ -65,22 +77,79 @@ export const Controller = async (
       return;
     }
 
-    // Move file from temp to permanent storage
+    if (isStudentRole(role)) {
+      let savedKey: string | null = null;
+      await db.query('BEGIN');
+      try {
+        await advisoryLockUser(db, userId!);
+        const usage = await selectDailyUsageForUpdate(db, userId!);
+        const uploads = usage?.uploads_count ?? 0;
+        if (uploads >= limits().maxUploadsPerDay) {
+          await db.query('ROLLBACK');
+          cleanupTemp();
+          res.status(400).json({
+            success: false,
+            message: `Daily upload limit reached (${limits().maxUploadsPerDay} files per day)`,
+          });
+          return;
+        }
+
+        savedKey = await saveFile(file.filename);
+
+        const fileRecord = await db.queryOne(
+          'INSERT INTO files (key, size, mime_type) VALUES ($1, $2, $3) RETURNING *',
+          [savedKey, file.size, file.mimetype]
+        );
+
+        const document = await db.queryOne(
+          `INSERT INTO documents (subject_id, file_id, title, description, visibility, uploaded_by, kind)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id, subject_id, file_id, title, description, visibility, uploaded_by, kind,
+                     download_count, created_at, updated_at`,
+          [subject_id, fileRecord.id, title, description || null, visibility || 'PRIVATE', userId, kind]
+        );
+
+        await incrementDailyUploads(db, userId!);
+        await db.query('COMMIT');
+
+        logger.info('Document uploaded successfully', {
+          documentId: document.id,
+          fileId: fileRecord.id,
+          subjectId: subject_id,
+          userId,
+        });
+
+        res.status(201).json({
+          success: true,
+          message: 'Document uploaded successfully',
+          data: {
+            ...document,
+            file: fileRecord,
+          },
+        });
+      } catch (innerErr) {
+        await db.query('ROLLBACK');
+        if (savedKey) {
+          await deleteFile(savedKey).catch(() => undefined);
+        }
+        throw innerErr;
+      }
+      return;
+    }
+
     const newFileName = await saveFile(file.filename);
 
-    // Create file record in database
     const fileRecord = await db.queryOne(
       'INSERT INTO files (key, size, mime_type) VALUES ($1, $2, $3) RETURNING *',
       [newFileName, file.size, file.mimetype]
     );
 
-    // Create document record
     const document = await db.queryOne(
-      `INSERT INTO documents (subject_id, file_id, title, description, visibility, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, subject_id, file_id, title, description, visibility, uploaded_by, 
+      `INSERT INTO documents (subject_id, file_id, title, description, visibility, uploaded_by, kind)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, subject_id, file_id, title, description, visibility, uploaded_by, kind,
                  download_count, created_at, updated_at`,
-      [subject_id, fileRecord.id, title, description || null, visibility || 'PRIVATE', userId]
+      [subject_id, fileRecord.id, title, description || null, visibility || 'PRIVATE', userId, kind]
     );
 
     logger.info('Document uploaded successfully', {
@@ -99,9 +168,7 @@ export const Controller = async (
       },
     });
   } catch (error) {
-    if (file && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
+    cleanupTemp();
     throw error;
   }
 };

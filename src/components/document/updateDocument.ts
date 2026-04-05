@@ -23,6 +23,7 @@ export const ValidationSchema = {
         message: 'Visibility must be either PUBLIC or PRIVATE',
       })
       .optional(),
+    kind: z.enum(['informational', 'lab_solutions']).optional(),
   }),
   params: z.object({
     id: z.string().uuid('Invalid document ID'),
@@ -38,7 +39,7 @@ export const Controller = async (
   const user = (req as any).user;
   const userId = user?.userId;
   const { id } = req.params;
-  const { title, description, visibility } = req.body;
+  const { title, description, visibility, kind } = req.body;
   const file = req.file;
 
   try {
@@ -89,6 +90,12 @@ export const Controller = async (
       paramCount++;
       params.push(visibility);
       updates.push(`visibility = $${paramCount}`);
+    }
+
+    if (kind !== undefined) {
+      paramCount++;
+      params.push(kind);
+      updates.push(`kind = $${paramCount}`);
     }
 
     if (file) {

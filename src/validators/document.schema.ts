@@ -18,6 +18,7 @@ export const uploadDocumentSchema = z.object({
     })
     .optional()
     .default('PRIVATE'),
+  kind: z.enum(['informational', 'lab_solutions']).optional().default('informational'),
 });
 
 export const updateDocumentSchema = z.object({
@@ -37,6 +38,7 @@ export const updateDocumentSchema = z.object({
       message: 'Visibility must be either PUBLIC or PRIVATE',
     })
     .optional(),
+  kind: z.enum(['informational', 'lab_solutions']).optional(),
 });
 
 export const documentIdParamSchema = z.object({
@@ -55,6 +57,7 @@ export const listDocumentsQuerySchema = z.object({
     .default('10')
     .transform((val) => parseInt(val, 10)),
   subject_id: z.string().uuid().optional(),
+  kind: z.enum(['informational', 'lab_solutions']).optional(),
   visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
   uploaded_by: z.string().uuid().optional(),
   search: z.string().optional(),

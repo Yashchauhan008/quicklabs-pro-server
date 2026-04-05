@@ -21,8 +21,11 @@ export default async function privateRoute(
     const token = authHeader.substring(7);
     const payload = verifyToken(token);
 
-    // ✅ Type assertion as workaround
-    (req as any).user = payload;
+    req.user = {
+      userId: payload.userId,
+      email: payload.email,
+      role: payload.role,
+    };
     
     next();
   } catch (error: any) {

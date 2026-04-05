@@ -7,4 +7,5 @@ export default {
   apiPrefix: '/api',
   temporaryFileStoragePath: path.join(process.cwd(), 'uploads', 'temp'),
   fileStoragePath: path.join(process.cwd(), 'uploads', 'documents'),
+  profilePictureStoragePath: path.join(process.cwd(), 'uploads', 'avatars'),
 };

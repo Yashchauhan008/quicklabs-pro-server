@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { RequestHandler } from 'express';
 import WithDatabase from '@utils/withDatabase';
 import { validate } from '@utils/validationHelper';
 import privateRoute from '@middleware/auth/privateRoute';
@@ -34,46 +34,49 @@ import {
   Controller as DeleteDocumentController,
 } from '../components/document/deleteDocument';
 
-const router = express.Router();
+export function createDocumentRouter(roleGuard: RequestHandler): express.Router {
+  const router = express.Router();
 
-router.use(privateRoute);
+  router.use(privateRoute);
+  router.use(roleGuard);
 
-router.post(
-  '/',
-  documentUpload.single('file'),
-  validate(UploadDocumentValidationSchema),
-  WithDatabase(UploadDocumentController)
-);
+  router.post(
+    '/',
+    documentUpload.single('file'),
+    validate(UploadDocumentValidationSchema),
+    WithDatabase(UploadDocumentController)
+  );
 
-router.get(
-  '/',
-  validate(ListDocumentsValidationSchema),
-  WithDatabase(ListDocumentsController)
-);
+  router.get(
+    '/',
+    validate(ListDocumentsValidationSchema),
+    WithDatabase(ListDocumentsController)
+  );
 
-router.get(
-  '/:id',
-  validate(GetDocumentValidationSchema),
-  WithDatabase(GetDocumentController)
-);
+  router.get(
+    '/:id',
+    validate(GetDocumentValidationSchema),
+    WithDatabase(GetDocumentController)
+  );
 
-router.get(
-  '/:id/download',
-  validate(DownloadDocumentValidationSchema),
-  WithDatabase(DownloadDocumentController)
-);
+  router.get(
+    '/:id/download',
+    validate(DownloadDocumentValidationSchema),
+    WithDatabase(DownloadDocumentController)
+  );
 
-router.put(
-  '/:id',
-  documentUpload.single('file'),
-  validate(UpdateDocumentValidationSchema),
-  WithDatabase(UpdateDocumentController)
-);
+  router.put(
+    '/:id',
+    documentUpload.single('file'),
+    validate(UpdateDocumentValidationSchema),
+    WithDatabase(UpdateDocumentController)
+  );
 
-router.delete(
-  '/:id',
-  validate(DeleteDocumentValidationSchema),
-  WithDatabase(DeleteDocumentController)
-);
+  router.delete(
+    '/:id',
+    validate(DeleteDocumentValidationSchema),
+    WithDatabase(DeleteDocumentController)
+  );
 
-export default router;
+  return router;
+}

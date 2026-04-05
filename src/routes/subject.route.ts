@@ -1,6 +1,4 @@
-// File Path: src/routes/subject.route.ts
-
-import express from 'express';
+import express, { RequestHandler } from 'express';
 import WithDatabase from '@utils/withDatabase';
 import { validate } from '@utils/validationHelper';
 import privateRoute from '@middleware/auth/privateRoute';
@@ -30,38 +28,41 @@ import {
   Controller as DeleteSubjectController,
 } from '../components/subject/deleteSubject';
 
-const router = express.Router();
+export function createSubjectRouter(roleGuard: RequestHandler): express.Router {
+  const router = express.Router();
 
-router.use(privateRoute);
+  router.use(privateRoute);
+  router.use(roleGuard);
 
-router.post(
-  '/',
-  validate(CreateSubjectValidationSchema),
-  WithDatabase(CreateSubjectController)
-);
+  router.post(
+    '/',
+    validate(CreateSubjectValidationSchema),
+    WithDatabase(CreateSubjectController)
+  );
 
-router.get(
-  '/',
-  validate(ListSubjectsValidationSchema),
-  WithDatabase(ListSubjectsController)
-);
+  router.get(
+    '/',
+    validate(ListSubjectsValidationSchema),
+    WithDatabase(ListSubjectsController)
+  );
 
-router.get(
-  '/:id',
-  validate(GetSubjectValidationSchema),
-  WithDatabase(GetSubjectController)
-);
+  router.get(
+    '/:id',
+    validate(GetSubjectValidationSchema),
+    WithDatabase(GetSubjectController)
+  );
 
-router.put(
-  '/:id',
-  validate(UpdateSubjectValidationSchema),
-  WithDatabase(UpdateSubjectController)
-);
+  router.put(
+    '/:id',
+    validate(UpdateSubjectValidationSchema),
+    WithDatabase(UpdateSubjectController)
+  );
 
-router.delete(
-  '/:id',
-  validate(DeleteSubjectValidationSchema),
-  WithDatabase(DeleteSubjectController)
-);
+  router.delete(
+    '/:id',
+    validate(DeleteSubjectValidationSchema),
+    WithDatabase(DeleteSubjectController)
+  );
 
-export default router;
+  return router;
+}

@@ -1,7 +1,12 @@
+import type { UserRole } from './role.type';
+
+export type { UserRole } from './role.type';
+
 export interface User {
     id: string;
     name: string;
     email: string;
+    role: UserRole;
     created_at: Date;
     updated_at: Date;
   }

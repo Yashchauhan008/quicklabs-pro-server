@@ -17,6 +17,9 @@ build/
 logs/
 *.log
 
+#uploads
+uploads/
+
 # OS
 .DS_Store
 Thumbs.db

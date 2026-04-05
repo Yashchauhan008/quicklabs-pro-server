@@ -39,13 +39,14 @@ export const Controller = async (
   const user = await db.queryOne(
     `INSERT INTO users (name, email, password_hash)
      VALUES ($1, $2, $3)
-     RETURNING id, name, email, created_at, updated_at`,
+     RETURNING id, name, email, role, social_profiles, created_at, updated_at`,
     [name, email, passwordHash]
   );
 
   const token = generateToken({
     userId: user.id,
     email: user.email,
+    role: user.role,
   });
 
   logger.info('User registered successfully', { userId: user.id, email: user.email });
@@ -53,7 +54,10 @@ export const Controller = async (
   res.status(201).json({
     success: true,
     data: {
-      user,
+      user: {
+        ...user,
+        profile_picture_url: null,
+      },
       token,
     },
   });

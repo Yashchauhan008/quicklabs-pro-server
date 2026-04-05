@@ -5,6 +5,7 @@ import Logger from '@service/logger';
 import errorHandler from '@middleware/errorHandler';
 import appRoute from '@routes/app.route';
 import Vars from '@config/var';
+import constant from '@config/constant';
 
 const app = express();
 
@@ -33,6 +34,16 @@ app.get('/status', (_req, res) => {
     service: Vars.serviceName,
   });
 });
+
+app.use(
+  '/files/avatars',
+  express.static(constant.profilePictureStoragePath, {
+    maxAge: 604800000,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+    },
+  })
+);
 
 app.use('/api', appRoute);
 
