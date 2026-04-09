@@ -36,6 +36,14 @@ import {
   ValidationSchema as ListEnquiriesValidationSchema,
   Controller as ListEnquiriesController,
 } from '../components/enquiry/listEnquiries';
+import {
+  ValidationSchema as VoteEnquiryValidationSchema,
+  Controller as VoteEnquiryController,
+} from '../components/enquiry/voteEnquiry';
+import {
+  ValidationSchema as DeleteEnquiryValidationSchema,
+  Controller as DeleteEnquiryController,
+} from '../components/enquiry/deleteEnquiry';
 
 import {
   ValidationSchema as AddPeerBookmarkValidationSchema,
@@ -139,9 +147,22 @@ router.post(
 router.get(
   '/enquiries',
   privateRoute,
-  requireRole('student'),
   validate(ListEnquiriesValidationSchema),
   WithDatabase(ListEnquiriesController)
+);
+
+router.post(
+  '/enquiries/:enquiry_id/votes',
+  privateRoute,
+  validate(VoteEnquiryValidationSchema),
+  WithDatabase(VoteEnquiryController)
+);
+
+router.delete(
+  '/enquiries/:enquiry_id',
+  privateRoute,
+  validate(DeleteEnquiryValidationSchema),
+  WithDatabase(DeleteEnquiryController)
 );
 
 router.use('/subjects', createSubjectRouter(requireRole('student')));
