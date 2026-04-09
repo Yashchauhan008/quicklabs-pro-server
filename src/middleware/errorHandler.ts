@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import logger from '@service/logger';
 import env from '@config/env';
 
@@ -8,6 +9,22 @@ export default function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(413).json({
+        success: false,
+        message: 'File size exceeds 75MB limit',
+      });
+      return;
+    }
+
+    res.status(400).json({
+      success: false,
+      message: err.message || 'File upload failed',
+    });
+    return;
+  }
+
   logger.error('Unhandled error', {
     error: err.message,
     stack: err.stack,

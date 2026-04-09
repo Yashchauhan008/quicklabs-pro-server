@@ -9,11 +9,6 @@ import {
 } from '../components/auth/login';
 
 import {
-  ValidationSchema as RegisterValidationSchema,
-  Controller as RegisterController,
-} from '../components/auth/register';
-
-import {
   Controller as LogoutController,
 } from '../components/auth/logout';
 
@@ -27,12 +22,6 @@ router.post(
   '/login',
   validate(LoginValidationSchema),
   WithDatabase(LoginController)
-);
-
-router.post(
-  '/register',
-  validate(RegisterValidationSchema),
-  WithDatabase(RegisterController)
 );
 
 router.delete(

@@ -16,6 +16,8 @@ const envSchema = z.object({
   
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('7d'),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
   
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   
@@ -61,6 +63,10 @@ const env = {
   jwt: {
     secret: validatedEnv.JWT_SECRET,
     expiresIn: validatedEnv.JWT_EXPIRES_IN,
+  },
+  google: {
+    clientId: validatedEnv.GOOGLE_CLIENT_ID,
+    clientSecret: validatedEnv.GOOGLE_CLIENT_SECRET,
   },
   cors: {
     origin: validatedEnv.CORS_ORIGIN,

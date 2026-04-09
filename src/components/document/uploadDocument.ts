@@ -56,6 +56,14 @@ export const Controller = async (
     return;
   }
 
+  if (!userId || !role) {
+    res.status(401).json({
+      success: false,
+      message: 'Unauthorized request',
+    });
+    return;
+  }
+
   const cleanupTemp = (): void => {
     if (file && fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);
@@ -81,8 +89,8 @@ export const Controller = async (
       let savedKey: string | null = null;
       await db.query('BEGIN');
       try {
-        await advisoryLockUser(db, userId!);
-        const usage = await selectDailyUsageForUpdate(db, userId!);
+        await advisoryLockUser(db, userId);
+        const usage = await selectDailyUsageForUpdate(db, userId);
         const uploads = usage?.uploads_count ?? 0;
         if (uploads >= limits().maxUploadsPerDay) {
           await db.query('ROLLBACK');
@@ -109,7 +117,7 @@ export const Controller = async (
           [subject_id, fileRecord.id, title, description || null, visibility || 'PRIVATE', userId, kind]
         );
 
-        await incrementDailyUploads(db, userId!);
+        await incrementDailyUploads(db, userId);
         await db.query('COMMIT');
 
         logger.info('Document uploaded successfully', {

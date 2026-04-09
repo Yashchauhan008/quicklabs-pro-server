@@ -1,4 +1,5 @@
-import express, { RequestHandler } from 'express';
+import express, { NextFunction, Request, RequestHandler, Response } from 'express';
+import multer from 'multer';
 import WithDatabase from '@utils/withDatabase';
 import { validate } from '@utils/validationHelper';
 import privateRoute from '@middleware/auth/privateRoute';
@@ -36,13 +37,35 @@ import {
 
 export function createDocumentRouter(roleGuard: RequestHandler): express.Router {
   const router = express.Router();
+  const uploadSingleDocument = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): void => {
+    documentUpload.single('file')(req, res, (err?: unknown) => {
+      if (!err) {
+        next();
+        return;
+      }
+
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        res.status(413).json({
+          success: false,
+          message: 'File size exceeds 75MB limit',
+        });
+        return;
+      }
+
+      next(err);
+    });
+  };
 
   router.use(privateRoute);
   router.use(roleGuard);
 
   router.post(
     '/',
-    documentUpload.single('file'),
+    uploadSingleDocument,
     validate(UploadDocumentValidationSchema),
     WithDatabase(UploadDocumentController)
   );
@@ -67,7 +90,7 @@ export function createDocumentRouter(roleGuard: RequestHandler): express.Router 
 
   router.put(
     '/:id',
-    documentUpload.single('file'),
+    uploadSingleDocument,
     validate(UpdateDocumentValidationSchema),
     WithDatabase(UpdateDocumentController)
   );

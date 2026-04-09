@@ -1,15 +1,17 @@
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
 import { DatabaseClient } from '@service/database';
-import { comparePassword } from '@utils/password';
 import { generateToken } from '@utils/jwtToken';
 import logger from '@service/logger';
 import { profilePicturePublicUrl } from '@utils/profilePictureUrl';
+import { OAuth2Client } from 'google-auth-library';
+import env from '@config/env';
+
+const googleClient = new OAuth2Client();
 
 export const ValidationSchema = {
   body: z.object({
-    email: z.string().email().trim().toLowerCase(),
-    password: z.string().min(1),
+    token: z.string().trim().min(1).max(5000),
   }),
 };
 
@@ -19,7 +21,23 @@ export const Controller = async (
   _next: NextFunction,
   db: DatabaseClient
 ): Promise<void> => { 
-  const { email, password } = req.body;
+  const { token: idToken } = req.body as z.infer<typeof ValidationSchema.body>;
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken,
+    audience: env.google.clientId,
+  });
+
+  const payload = ticket.getPayload();
+  const email = payload?.email?.trim().toLowerCase();
+
+  if (!email) {
+    res.status(400).json({
+      success: false,
+      message: 'Invalid Google token',
+    });
+    return;
+  }
 
   const user = await db.queryOne(
     `SELECT u.*, f.key AS profile_picture_key
@@ -29,30 +47,33 @@ export const Controller = async (
     [email]
   );
 
-  if (!user) {
-    logger.warn('Login failed: user not found', { email });
-    res.status(401).json({
-      success: false,
-      message: 'Invalid credentials',
-    });
-    return;  
+  let resolvedUser = user;
+  if (!resolvedUser) {
+    const inferredName = payload?.name?.trim() || email.split('@')[0];
+    /**
+     * Legacy schema keeps password_hash NOT NULL, so Google accounts use a placeholder
+     * hash and authenticate only via verified Google tokens.
+     */
+    resolvedUser = await db.queryOne(
+      `INSERT INTO users (name, email, password_hash)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [inferredName, email, 'GOOGLE_AUTH_ONLY']
+    );
   }
 
-  const isValidPassword = await comparePassword(password, user.password_hash);
-
-  if (!isValidPassword) {
-    logger.warn('Login failed: invalid password', { email });
-    res.status(401).json({
+  if (!resolvedUser) {
+    res.status(500).json({
       success: false,
-      message: 'Invalid credentials',
+      message: 'Unable to authenticate user',
     });
-    return;  // ✅ Just return
+    return;
   }
 
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
+  const authToken = generateToken({
+    userId: resolvedUser.id,
+    email: resolvedUser.email,
+    role: resolvedUser.role,
   });
 
   const {
@@ -60,9 +81,9 @@ export const Controller = async (
     profile_picture_file_id: _fid,
     profile_picture_key,
     ...userRest
-  } = user;
+  } = resolvedUser;
 
-  logger.info('User logged in successfully', { userId: user.id, email: user.email });
+  logger.info('User logged in successfully', { userId: resolvedUser.id, email: resolvedUser.email });
 
   res.status(200).json({
     success: true,
@@ -71,7 +92,7 @@ export const Controller = async (
         ...userRest,
         profile_picture_url: profilePicturePublicUrl(profile_picture_key),
       },
-      token,
+      token: authToken,
     },
   });
 };

@@ -6,8 +6,10 @@ yarn-error.log*
 
 # Environment
 .env
+.env.*
 .env.local
 .env.*.local
+!.env.example
 
 # Build
 dist/
@@ -41,3 +43,10 @@ coverage/
 # Database
 *.sql.bak
 db/schema.sql
+
+# Secrets / keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
