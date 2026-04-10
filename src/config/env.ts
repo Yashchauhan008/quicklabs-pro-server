@@ -7,25 +7,26 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('5001').transform(Number),
   HOST: z.string().default('localhost'),
-  
+
   DB_HOST: z.string().min(1),
   DB_PORT: z.string().default('5432').transform(Number),
   DB_NAME: z.string().min(1),
   DB_USER: z.string().min(1),
   DB_PASSWORD: z.string().min(1),
-  
+
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('7d'),
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
-  
+
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
-  
+
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('debug'),
 
   MAX_SUBJECTS_PER_STUDENT: z.string().default('2').transform(Number),
   MAX_UPLOADS_PER_DAY_STUDENT: z.string().default('10').transform(Number),
-  MAX_DOWNLOADS_PER_DAY: z.string().default('50').transform(Number),
+  /** 0 = no daily download cap for students (ZIP + per-file preview). */
+  MAX_DOWNLOADS_PER_DAY: z.string().default('0').transform(Number),
 });
 
 function validateEnv() {

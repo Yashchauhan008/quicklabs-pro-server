@@ -22,7 +22,7 @@ export const Controller = async (
   const { permanent } = req.query;
 
   const existingDocument = await db.queryOne(
-    'SELECT id, uploaded_by, file_id, title FROM documents WHERE id = $1 AND deleted_at IS NULL',
+    'SELECT id, uploaded_by, title FROM documents WHERE id = $1 AND deleted_at IS NULL',
     [id]
   );
 
@@ -43,22 +43,28 @@ export const Controller = async (
   }
 
   if (permanent === 'true') {
-    const fileRecord = await db.queryOne(
-      'SELECT key FROM files WHERE id = $1',
-      [existingDocument.file_id]
+    const fileRows = await db.queryMany(
+      `SELECT f.id AS file_id, f.key
+       FROM document_files df
+       JOIN files f ON f.id = df.file_id
+       WHERE df.document_id = $1`,
+      [id]
     );
-    
-    if (fileRecord) {
+
+    for (const fr of fileRows) {
       try {
-        await deleteFile(fileRecord.key);
+        await deleteFile(fr.key as string);
       } catch (error) {
         console.error('Error deleting file:', error);
       }
-
-      await db.query('DELETE FROM files WHERE id = $1', [fileRecord.id]);
     }
 
     await db.query('DELETE FROM documents WHERE id = $1', [id]);
+
+    if (fileRows.length) {
+      const ids = fileRows.map((r) => r.file_id);
+      await db.query('DELETE FROM files WHERE id = ANY($1::uuid[])', [ids]);
+    }
 
     logger.info('Document permanently deleted', {
       documentId: id,

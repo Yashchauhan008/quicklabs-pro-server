@@ -96,7 +96,7 @@ export const Controller = async (
 
   params.push(limit, offset);
   const documents = await db.queryMany(
-    `SELECT 
+    `SELECT
       d.id,
       d.title,
       d.description,
@@ -112,15 +112,18 @@ export const Controller = async (
       u.email AS uploader_email,
       upf.key AS uploader_profile_picture_key,
       f.key AS file_key,
+      df.title AS file_name,
       f.size AS file_size,
       f.mime_type AS file_mime_type,
+      (SELECT COUNT(*)::int FROM document_files df_c WHERE df_c.document_id = d.id) AS file_count,
       (SELECT COALESCE(ROUND(AVG(dr.stars)::numeric, 2), 0) FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_avg,
       (SELECT COUNT(*)::int FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_count
     FROM documents d
     LEFT JOIN subjects s ON d.subject_id = s.id
     LEFT JOIN users u ON d.uploaded_by = u.id
     LEFT JOIN files upf ON upf.id = u.profile_picture_file_id
-    LEFT JOIN files f ON d.file_id = f.id
+    LEFT JOIN document_files df ON df.document_id = d.id AND df.is_main = true
+    LEFT JOIN files f ON df.file_id = f.id
     WHERE ${whereClause}
     ORDER BY d.created_at DESC
     LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`,

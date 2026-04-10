@@ -56,11 +56,14 @@ export const Controller = async (
       d.created_at,
       u.name as uploader_name,
       f.key as file_key,
+      df.title as file_name,
       f.size as file_size,
-      f.mime_type as file_mime_type
+      f.mime_type as file_mime_type,
+      (SELECT COUNT(*)::int FROM document_files df_c WHERE df_c.document_id = d.id) AS file_count
     FROM documents d
     LEFT JOIN users u ON d.uploaded_by = u.id
-    LEFT JOIN files f ON d.file_id = f.id
+    LEFT JOIN document_files df ON df.document_id = d.id AND df.is_main = true
+    LEFT JOIN files f ON df.file_id = f.id
     WHERE d.subject_id = $1 
       AND d.deleted_at IS NULL
       AND (d.visibility = 'PUBLIC' OR d.uploaded_by = $2)

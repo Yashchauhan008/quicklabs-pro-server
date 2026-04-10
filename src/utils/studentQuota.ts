@@ -73,3 +73,8 @@ export const limits = (): {
   maxUploadsPerDay: number;
   maxDownloadsPerDay: number;
 } => env.studentLimits;
+
+/** When false, students are not blocked by daily download count (still no increment for that quota). */
+export function isStudentDownloadQuotaEnforced(): boolean {
+  return limits().maxDownloadsPerDay > 0;
+}

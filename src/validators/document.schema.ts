@@ -19,6 +19,11 @@ export const uploadDocumentSchema = z.object({
     .optional()
     .default('PRIVATE'),
   kind: z.enum(['informational', 'lab_solutions']).optional().default('informational'),
+  main_index: z.coerce.number().int().min(0).optional(),
+  file_descriptions: z.string().optional(),
+  file_titles: z
+    .string({ message: 'file_titles is required' })
+    .min(1, 'file_titles is required'),
 });
 
 export const updateDocumentSchema = z.object({

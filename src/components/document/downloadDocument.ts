@@ -4,9 +4,11 @@ import { DatabaseClient } from '@service/database';
 import { getFilePath } from '@service/file-storage';
 import fs from 'fs';
 import path from 'path';
+import archiver from 'archiver';
 import {
   advisoryLockUser,
   incrementDailyDownloads,
+  isStudentDownloadQuotaEnforced,
   isStudentRole,
   limits,
   selectDailyUsageForUpdate,
@@ -17,6 +19,35 @@ export const ValidationSchema = {
     id: z.string().uuid('Invalid document ID'),
   }),
 };
+
+function slugifyForFilename(title: string): string {
+  const s = title
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 80);
+  return s || 'document';
+}
+
+function zipEntryName(
+  sortOrder: number,
+  title: string,
+  fileKey: string,
+  used: Set<string>
+): string {
+  const ext = path.extname(path.basename(fileKey));
+  const stem = slugifyForFilename(`${sortOrder + 1}_${title}`);
+  const base = stem || `file_${sortOrder + 1}`;
+  let name = `${base}${ext}`;
+  let n = 1;
+  while (used.has(name.toLowerCase())) {
+    name = `${base}_${n}${ext}`;
+    n += 1;
+  }
+  used.add(name.toLowerCase());
+  return name;
+}
 
 export const Controller = async (
   req: Request,
@@ -30,12 +61,9 @@ export const Controller = async (
   const { id } = req.params;
 
   const document = await db.queryOne(
-    `SELECT 
-      d.*,
-      f.key as file_key
-    FROM documents d
-    LEFT JOIN files f ON d.file_id = f.id
-    WHERE d.id = $1 AND d.deleted_at IS NULL`,
+    `SELECT d.id, d.title, d.visibility, d.uploaded_by
+     FROM documents d
+     WHERE d.id = $1 AND d.deleted_at IS NULL`,
     [id]
   );
 
@@ -55,17 +83,35 @@ export const Controller = async (
     return;
   }
 
-  const filePath = getFilePath(document.file_key);
+  const attachments = await db.queryMany(
+    `SELECT df.sort_order, df.title, f.key
+     FROM document_files df
+     JOIN files f ON f.id = df.file_id
+     WHERE df.document_id = $1
+     ORDER BY df.sort_order, df.created_at`,
+    [id]
+  );
 
-  if (!fs.existsSync(filePath)) {
+  if (!attachments.length) {
     res.status(404).json({
       success: false,
-      message: 'File not found on server',
+      message: 'No files attached to this document',
     });
     return;
   }
 
-  if (isStudentRole(role)) {
+  for (const row of attachments) {
+    const filePath = getFilePath(row.key as string);
+    if (!fs.existsSync(filePath)) {
+      res.status(500).json({
+        success: false,
+        message: 'One or more files are missing on the server',
+      });
+      return;
+    }
+  }
+
+  if (isStudentRole(role) && isStudentDownloadQuotaEnforced()) {
     await db.query('BEGIN');
     try {
       await advisoryLockUser(db, userId!);
@@ -92,11 +138,35 @@ export const Controller = async (
     [id]
   );
 
-  const fileName = document.title + path.extname(document.file_key);
+  const zipBase = slugifyForFilename(document.title as string);
+  const asciiFallback = `${zipBase}.zip`;
+  const encoded = encodeURIComponent(`${zipBase}.zip`);
 
-  res.download(filePath, fileName, (err) => {
-    if (err) {
-      console.error('Error downloading file:', err);
-    }
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`
+  );
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+
+  archive.pipe(res);
+
+  const usedNames = new Set<string>();
+  for (const row of attachments) {
+    const filePath = getFilePath(row.key as string);
+    const entryName = zipEntryName(
+      row.sort_order as number,
+      String(row.title ?? 'file'),
+      row.key as string,
+      usedNames
+    );
+    archive.file(filePath, { name: entryName });
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    archive.on('end', () => resolve());
+    archive.on('error', (err) => reject(err));
+    void archive.finalize();
   });
 };
