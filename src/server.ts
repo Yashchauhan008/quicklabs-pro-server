@@ -1,4 +1,3 @@
-import 'tsconfig-paths/register';
 import './types/express-augment';
 import dotenv from 'dotenv';
 import app from './app';

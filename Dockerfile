@@ -1,45 +1,27 @@
-# Build stage
-FROM node:20-alpine AS builder
+# ---------- BUILD ----------
+    FROM node:18-alpine AS builder
+    WORKDIR /app
 
-WORKDIR /app
+    COPY package.json package-lock.json ./
+    RUN npm ci
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
+    COPY . .
+    RUN npm run build
 
-# Copy source code and build
-COPY . .
-RUN npm run build
+    # ---------- RUN ----------
+    FROM node:18-alpine AS runner
+    WORKDIR /app
 
-# Runner stage
-FROM node:20-alpine AS runner
+    RUN npm install -g dbmate
 
-WORKDIR /app
+    COPY package.json package-lock.json ./
+    RUN npm ci --omit=dev && npm cache clean --force
 
-# Install production dependencies
-COPY package*.json ./
-RUN npm install --production
+    RUN mkdir -p logs uploads
 
-# Install dbmate for migrations (Alpine version)
-RUN apk add --no-cache curl \
-    && curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64 \
-    && chmod +x /usr/local/bin/dbmate \
-    && apk del curl
+    COPY --from=builder /app/dist ./dist
+    COPY --from=builder /app/db ./db
 
-# Copy built files and necessary assets
-COPY --from:builder /app/dist ./dist
-COPY --from:builder /app/db ./db
-COPY --from:builder /app/dbmate.json ./dbmate.json
-COPY --from:builder /app/tsconfig.json ./tsconfig.json
 
-# Create logs and uploads directories
-RUN mkdir -p logs uploads && chmod 777 logs uploads
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=5001
-
-EXPOSE 5001
-
-# Start the application
-CMD ["npm", "run", "start"]
+    EXPOSE 3003
+    CMD ["sh", "-c", "npx dbmate up && npm run start"]

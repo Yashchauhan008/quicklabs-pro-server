@@ -1,44 +1,18 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: quicklabs-db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-quicklabs_pro}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-quicklabs_pro}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: always
+    image: yashchauhan008/quicklabs-backend:latest
+    platform: linux/amd64
     container_name: quicklabs-backend
-    restart: always
-    depends_on:
-      db:
-        condition: service_healthy
     env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-quicklabs_pro}?sslmode=disable
-      DB_HOST: db
-      PORT: 5001
+      - ./.env.prod
     ports:
-      - "5001:5001"
+      - '3003:3003'
+    volumes:
+      - ${PWD}/logs:/app/logs
+      - ${PWD}/uploads:/app/uploads
     command: >
       sh -c "dbmate up && npm run start"
-    volumes:
-      - ./logs:/app/logs
-      - ./uploads:/app/uploads
-
-volumes:
-  postgres_data:

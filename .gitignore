@@ -50,3 +50,6 @@ db/schema.sql
 *.crt
 *.p12
 *.pfx
+
+
+docker-build.sh
