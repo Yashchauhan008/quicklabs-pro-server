@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
 import { DatabaseClient } from '@service/database';
+import { profilePicturePublicUrl } from '@utils/profilePictureUrl';
 
 export const ValidationSchema = {
   params: z.object({
@@ -17,21 +18,26 @@ export const Controller = async (
   const { id } = req.params;
 
   const subject = await db.queryOne(
-    `SELECT 
+    `SELECT
       s.id,
       s.name,
       s.description,
       s.created_by,
+      u.id as creator_id,
       s.created_at,
       s.updated_at,
       u.name as creator_name,
       u.email as creator_email,
+      cpf.key as creator_profile_picture_key,
+      bf.key as banner_key,
       COUNT(d.id) as document_count
     FROM subjects s
     LEFT JOIN users u ON s.created_by = u.id
+    LEFT JOIN files cpf ON cpf.id = u.profile_picture_file_id
+    LEFT JOIN files bf ON bf.id = s.banner_file_id
     LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
     WHERE s.id = $1 AND s.deleted_at IS NULL
-    GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at, u.name, u.email`,
+    GROUP BY s.id, s.name, s.description, s.created_by, u.id, s.created_at, s.updated_at, u.name, u.email, cpf.key, bf.key`,
     [id]
   );
 
@@ -47,7 +53,7 @@ export const Controller = async (
   const userId = user?.userId;
 
   const recentDocuments = await db.queryMany(
-    `SELECT 
+    `SELECT
       d.id,
       d.title,
       d.kind,
@@ -64,7 +70,7 @@ export const Controller = async (
     LEFT JOIN users u ON d.uploaded_by = u.id
     LEFT JOIN document_files df ON df.document_id = d.id AND df.is_main = true
     LEFT JOIN files f ON df.file_id = f.id
-    WHERE d.subject_id = $1 
+    WHERE d.subject_id = $1
       AND d.deleted_at IS NULL
       AND (d.visibility = 'PUBLIC' OR d.uploaded_by = $2)
     ORDER BY d.created_at DESC
@@ -72,10 +78,20 @@ export const Controller = async (
     [id, userId]
   );
 
+  const {
+    banner_key: bannerKey,
+    creator_profile_picture_key: creatorProfilePictureKey,
+    ...subjectData
+  } = subject as Record<string, unknown>;
+
   res.status(200).json({
     success: true,
     data: {
-      ...subject,
+      ...subjectData,
+      banner_url: profilePicturePublicUrl(bannerKey as string | null | undefined),
+      creator_profile_picture_url: profilePicturePublicUrl(
+        creatorProfilePictureKey as string | null | undefined
+      ),
       recent_documents: recentDocuments,
     },
   });

@@ -21,10 +21,10 @@ export const upload = async (filePath: string): Promise<string> => {
   if (!isFileExists) {
     throw new ServerError('NOT_FOUND', 'File not found');
   }
-  
+
   const fileName = path.basename(filePath);
   const destinationPath = path.join(fileStoragePath, fileName);
-  
+
   await fsp.rename(filePath, destinationPath);
   return fileName;
 };
@@ -45,9 +45,9 @@ export const deleteFile = async (filename: string): Promise<void> => {
 export const replaceOldFile = async (oldFileName: string, newFileName: string): Promise<string> => {
   if (!newFileName) return oldFileName;
   if (oldFileName === newFileName) return newFileName;
-  
+
   await saveFile(newFileName);
-  
+
   // Delete old file
   if (oldFileName) {
     try {
@@ -57,7 +57,7 @@ export const replaceOldFile = async (oldFileName: string, newFileName: string): 
       console.error('Error deleting old file:', error);
     }
   }
-  
+
   return newFileName;
 };
 

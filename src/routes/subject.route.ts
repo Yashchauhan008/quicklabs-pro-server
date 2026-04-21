@@ -2,6 +2,7 @@ import express, { RequestHandler } from 'express';
 import WithDatabase from '@utils/withDatabase';
 import { validate } from '@utils/validationHelper';
 import privateRoute from '@middleware/auth/privateRoute';
+import imageUpload from '@middleware/multer/imageUpload';
 
 import {
   ValidationSchema as CreateSubjectValidationSchema,
@@ -36,6 +37,7 @@ export function createSubjectRouter(roleGuard: RequestHandler): express.Router {
 
   router.post(
     '/',
+    imageUpload.single('banner'),
     validate(CreateSubjectValidationSchema),
     WithDatabase(CreateSubjectController)
   );
@@ -54,6 +56,7 @@ export function createSubjectRouter(roleGuard: RequestHandler): express.Router {
 
   router.put(
     '/:id',
+    imageUpload.single('banner'),
     validate(UpdateSubjectValidationSchema),
     WithDatabase(UpdateSubjectController)
   );

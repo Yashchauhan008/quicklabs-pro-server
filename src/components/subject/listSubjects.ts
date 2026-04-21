@@ -62,10 +62,11 @@ export const Controller = async (
 
   params.push(limit, offset);
   const subjects = await db.queryMany(
-    `SELECT 
+    `SELECT
       s.id,
       s.name,
       s.description,
+      bf.key AS banner_key,
       s.created_by,
       s.created_at,
       s.updated_at,
@@ -76,21 +77,23 @@ export const Controller = async (
       COUNT(d.id) AS document_count
     FROM subjects s
     LEFT JOIN users u ON s.created_by = u.id
+    LEFT JOIN files bf ON bf.id = s.banner_file_id
     LEFT JOIN files cpf ON cpf.id = u.profile_picture_file_id
     LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
     WHERE ${whereClause}
     GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at,
-      u.id, u.name, u.email, cpf.key
+      u.id, u.name, u.email, cpf.key, bf.key
     ORDER BY s.created_at DESC
     LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`,
     params
   );
 
   const data = subjects.map((row: Record<string, unknown>) => {
-    const { creator_profile_picture_key: key, ...rest } = row;
+    const { creator_profile_picture_key: key, banner_key: bannerKey, ...rest } = row;
     return {
       ...rest,
       creator_profile_picture_url: profilePicturePublicUrl(key as string | null | undefined),
+      banner_url: profilePicturePublicUrl(bannerKey as string | null | undefined),
     };
   });
 
