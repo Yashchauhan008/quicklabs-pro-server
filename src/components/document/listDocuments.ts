@@ -104,6 +104,10 @@ export const Controller = async (
       d.visibility,
       d.uploaded_by AS uploader_id,
       d.download_count,
+      d.university_id,
+      d.branch_id,
+      d.batch_year,
+      d.semester,
       d.created_at,
       d.updated_at,
       s.name AS subject_name,
@@ -115,6 +119,8 @@ export const Controller = async (
       df.title AS file_name,
       f.size AS file_size,
       f.mime_type AS file_mime_type,
+      uni.name AS university_name,
+      br.name AS branch_name,
       (SELECT COUNT(*)::int FROM document_files df_c WHERE df_c.document_id = d.id) AS file_count,
       (SELECT COALESCE(ROUND(AVG(dr.stars)::numeric, 2), 0) FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_avg,
       (SELECT COUNT(*)::int FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_count
@@ -124,6 +130,8 @@ export const Controller = async (
     LEFT JOIN files upf ON upf.id = u.profile_picture_file_id
     LEFT JOIN document_files df ON df.document_id = d.id AND df.is_main = true
     LEFT JOIN files f ON df.file_id = f.id
+    LEFT JOIN universities uni ON uni.id = d.university_id
+    LEFT JOIN branches br ON br.id = d.branch_id
     WHERE ${whereClause}
     ORDER BY d.created_at DESC
     LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`,

@@ -27,6 +27,7 @@ const envSchema = z.object({
   MAX_UPLOADS_PER_DAY_STUDENT: z.string().default('10').transform(Number),
   /** 0 = no daily download cap for students (ZIP + per-file preview). */
   MAX_DOWNLOADS_PER_DAY: z.string().default('0').transform(Number),
+  PRIVATE_STATIC_ACCESS_TOKEN: z.string().min(16),
 });
 
 function validateEnv() {
@@ -79,6 +80,9 @@ const env = {
     maxSubjects: validatedEnv.MAX_SUBJECTS_PER_STUDENT,
     maxUploadsPerDay: validatedEnv.MAX_UPLOADS_PER_DAY_STUDENT,
     maxDownloadsPerDay: validatedEnv.MAX_DOWNLOADS_PER_DAY,
+  },
+  security: {
+    privateStaticAccessToken: validatedEnv.PRIVATE_STATIC_ACCESS_TOKEN,
   },
 } as const;
 

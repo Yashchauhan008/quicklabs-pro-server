@@ -28,17 +28,25 @@ export const Controller = async (
       d.visibility,
       d.uploaded_by,
       d.download_count,
+      d.university_id,
+      d.branch_id,
+      d.batch_year,
+      d.semester,
       d.created_at,
       d.updated_at,
       d.deleted_at,
       s.name as subject_name,
       u.name as uploader_name,
       u.email as uploader_email,
+      uni.name AS university_name,
+      br.name AS branch_name,
       (SELECT COALESCE(ROUND(AVG(dr.stars)::numeric, 2), 0) FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_avg,
       (SELECT COUNT(*)::int FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_count
     FROM documents d
     LEFT JOIN subjects s ON d.subject_id = s.id
     LEFT JOIN users u ON d.uploaded_by = u.id
+    LEFT JOIN universities uni ON uni.id = d.university_id
+    LEFT JOIN branches br ON br.id = d.branch_id
     WHERE d.id = $1 AND d.deleted_at IS NULL`,
     [id]
   );

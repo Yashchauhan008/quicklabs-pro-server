@@ -50,6 +50,10 @@ export const ValidationSchema = {
       .optional()
       .default('PRIVATE'),
     kind: z.enum(['informational', 'lab_solutions']).optional().default('informational'),
+    university_id: z.string().uuid().optional(),
+    branch_id: z.string().uuid().optional(),
+    batch_year: z.coerce.number().int().min(2000).max(2100).optional(),
+    semester: z.coerce.number().int().min(1).max(12).optional(),
     main_index: z.coerce.number().int().min(0).optional(),
     file_descriptions: z.string().optional(),
     file_titles: z
@@ -69,8 +73,20 @@ export const Controller = async (
   const role = user?.role;
   const files = req.files as Express.Multer.File[] | undefined;
 
-  const { subject_id, title, description, visibility, kind, main_index, file_descriptions, file_titles } =
-    req.body as z.infer<typeof ValidationSchema.body>;
+  const {
+    subject_id,
+    title,
+    description,
+    visibility,
+    kind,
+    university_id,
+    branch_id,
+    batch_year,
+    semester,
+    main_index,
+    file_descriptions,
+    file_titles,
+  } = req.body as z.infer<typeof ValidationSchema.body>;
 
   const cleanupTemps = (): void => {
     if (!files?.length) return;
@@ -86,6 +102,18 @@ export const Controller = async (
       await deleteFile(k).catch(() => undefined);
     }
   };
+
+  if (branch_id) {
+    const branch = await db.queryOne(
+      'SELECT id FROM branches WHERE id = $1 AND deleted_at IS NULL',
+      [branch_id]
+    );
+    if (!branch) {
+      cleanupTemps();
+      res.status(400).json({ success: false, message: 'Invalid branch_id' });
+      return;
+    }
+  }
 
   if (!files?.length) {
     res.status(400).json({
@@ -170,11 +198,22 @@ export const Controller = async (
       }
 
       const document = await db.queryOne(
-        `INSERT INTO documents (subject_id, title, description, visibility, uploaded_by, kind)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO documents (subject_id, title, description, visibility, uploaded_by, kind, university_id, branch_id, batch_year, semester)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id, subject_id, title, description, visibility, uploaded_by, kind,
-                   download_count, created_at, updated_at`,
-        [subject_id, title, description || null, visibility || 'PRIVATE', userId, kind]
+                   university_id, branch_id, batch_year, semester, download_count, created_at, updated_at`,
+        [
+          subject_id,
+          title,
+          description || null,
+          visibility || 'PRIVATE',
+          userId,
+          kind,
+          university_id ?? null,
+          branch_id ?? null,
+          batch_year ?? null,
+          semester ?? null,
+        ]
       );
 
       if (!document) {

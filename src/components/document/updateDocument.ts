@@ -22,6 +22,10 @@ export const ValidationSchema = {
       })
       .optional(),
     kind: z.enum(['informational', 'lab_solutions']).optional(),
+    university_id: z.string().uuid().nullable().optional(),
+    branch_id: z.string().uuid().nullable().optional(),
+    batch_year: z.coerce.number().int().min(2000).max(2100).nullable().optional(),
+    semester: z.coerce.number().int().min(1).max(12).nullable().optional(),
   }),
   params: z.object({
     id: z.string().uuid('Invalid document ID'),
@@ -37,7 +41,18 @@ export const Controller = async (
   const user = (req as any).user;
   const userId = user?.userId;
   const { id } = req.params;
-  const { title, description, visibility, kind } = req.body;
+  const { title, description, visibility, kind, university_id, branch_id, batch_year, semester } = req.body;
+  if (branch_id) {
+    const branch = await db.queryOne(
+      'SELECT id FROM branches WHERE id = $1 AND deleted_at IS NULL',
+      [branch_id]
+    );
+    if (!branch) {
+      res.status(400).json({ success: false, message: 'Invalid branch_id' });
+      return;
+    }
+  }
+
 
   const existingDocument = await db.queryOne(
     'SELECT id, uploaded_by FROM documents WHERE id = $1 AND deleted_at IS NULL',
@@ -86,6 +101,26 @@ export const Controller = async (
     paramCount += 1;
     params.push(kind);
     updates.push(`kind = $${paramCount}`);
+  }
+  if (university_id !== undefined) {
+    paramCount += 1;
+    params.push(university_id);
+    updates.push(`university_id = $${paramCount}`);
+  }
+  if (branch_id !== undefined) {
+    paramCount += 1;
+    params.push(branch_id);
+    updates.push(`branch_id = $${paramCount}`);
+  }
+  if (batch_year !== undefined) {
+    paramCount += 1;
+    params.push(batch_year);
+    updates.push(`batch_year = $${paramCount}`);
+  }
+  if (semester !== undefined) {
+    paramCount += 1;
+    params.push(semester);
+    updates.push(`semester = $${paramCount}`);
   }
 
   if (updates.length === 0) {

@@ -6,10 +6,20 @@ export function profilePicturePublicUrl(key: string | null | undefined): string 
 
 export function stripProfilePictureKey<T extends Record<string, unknown>>(
   row: T
-): Omit<T, 'profile_picture_key'> & { profile_picture_url: string | null } {
-  const { profile_picture_key: key, ...rest } = row as T & { profile_picture_key?: string | null };
+): Omit<T, 'profile_picture_key' | 'university_logo_key'> & {
+  profile_picture_url: string | null;
+  university_logo_url: string | null;
+} {
+  const { profile_picture_key: pkey, university_logo_key: ukey, ...rest } = row as T & {
+    profile_picture_key?: string | null;
+    university_logo_key?: string | null;
+  };
   return {
     ...rest,
-    profile_picture_url: profilePicturePublicUrl(key),
-  } as Omit<T, 'profile_picture_key'> & { profile_picture_url: string | null };
+    profile_picture_url: profilePicturePublicUrl(pkey),
+    university_logo_url: profilePicturePublicUrl(ukey),
+  } as Omit<T, 'profile_picture_key' | 'university_logo_key'> & {
+    profile_picture_url: string | null;
+    university_logo_url: string | null;
+  };
 }
