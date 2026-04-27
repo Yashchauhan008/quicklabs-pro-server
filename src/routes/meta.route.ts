@@ -40,8 +40,6 @@ import {
 
 const router = express.Router();
 
-router.use(privateStaticToken);
-
 router.get(
   '/universities',
   validate(ListUniversitiesValidationSchema),
@@ -49,6 +47,7 @@ router.get(
 );
 router.post(
   '/universities',
+  privateStaticToken,
   imageUpload.single('logo'),
   validate(CreateUniversityValidationSchema),
   WithDatabase(CreateUniversityController)
@@ -61,6 +60,7 @@ router.put(
 );
 router.delete(
   '/universities/:id',
+  privateStaticToken,
   validate(DeleteUniversityValidationSchema),
   WithDatabase(DeleteUniversityController)
 );
@@ -72,16 +72,19 @@ router.get(
 );
 router.post(
   '/branches',
+  privateStaticToken,
   validate(CreateBranchValidationSchema),
   WithDatabase(CreateBranchController)
 );
 router.put(
   '/branches/:id',
+  privateStaticToken,
   validate(UpdateBranchValidationSchema),
   WithDatabase(UpdateBranchController)
 );
 router.delete(
   '/branches/:id',
+  privateStaticToken,
   validate(DeleteBranchValidationSchema),
   WithDatabase(DeleteBranchController)
 );

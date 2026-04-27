@@ -23,21 +23,16 @@ export const Controller = async (
       s.name,
       s.description,
       s.created_by,
-      u.id as creator_id,
       s.created_at,
       s.updated_at,
-      u.name as creator_name,
-      u.email as creator_email,
-      cpf.key as creator_profile_picture_key,
       bf.key as banner_key,
-      COUNT(d.id) as document_count
+      COUNT(d.id)::int as document_count,
+      COALESCE(SUM(d.download_count), 0)::int as total_download_count
     FROM subjects s
-    LEFT JOIN users u ON s.created_by = u.id
-    LEFT JOIN files cpf ON cpf.id = u.profile_picture_file_id
     LEFT JOIN files bf ON bf.id = s.banner_file_id
     LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
     WHERE s.id = $1 AND s.deleted_at IS NULL
-    GROUP BY s.id, s.name, s.description, s.created_by, u.id, s.created_at, s.updated_at, u.name, u.email, cpf.key, bf.key`,
+    GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at, bf.key`,
     [id]
   );
 
@@ -80,7 +75,6 @@ export const Controller = async (
 
   const {
     banner_key: bannerKey,
-    creator_profile_picture_key: creatorProfilePictureKey,
     ...subjectData
   } = subject as Record<string, unknown>;
 
@@ -89,9 +83,6 @@ export const Controller = async (
     data: {
       ...subjectData,
       banner_url: profilePicturePublicUrl(bannerKey as string | null | undefined),
-      creator_profile_picture_url: profilePicturePublicUrl(
-        creatorProfilePictureKey as string | null | undefined
-      ),
       recent_documents: recentDocuments,
     },
   });

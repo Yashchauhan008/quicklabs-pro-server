@@ -70,29 +70,22 @@ export const Controller = async (
       s.created_by,
       s.created_at,
       s.updated_at,
-      u.id AS creator_id,
-      u.name AS creator_name,
-      u.email AS creator_email,
-      cpf.key AS creator_profile_picture_key,
-      COUNT(d.id) AS document_count
+      COUNT(d.id)::int AS document_count,
+      COALESCE(SUM(d.download_count), 0)::int AS total_download_count
     FROM subjects s
-    LEFT JOIN users u ON s.created_by = u.id
     LEFT JOIN files bf ON bf.id = s.banner_file_id
-    LEFT JOIN files cpf ON cpf.id = u.profile_picture_file_id
     LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
     WHERE ${whereClause}
-    GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at,
-      u.id, u.name, u.email, cpf.key, bf.key
+    GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at, bf.key
     ORDER BY s.created_at DESC
     LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`,
     params
   );
 
   const data = subjects.map((row: Record<string, unknown>) => {
-    const { creator_profile_picture_key: key, banner_key: bannerKey, ...rest } = row;
+    const { banner_key: bannerKey, ...rest } = row;
     return {
       ...rest,
-      creator_profile_picture_url: profilePicturePublicUrl(key as string | null | undefined),
       banner_url: profilePicturePublicUrl(bannerKey as string | null | undefined),
     };
   });

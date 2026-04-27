@@ -4,12 +4,6 @@ import { DatabaseClient } from '@service/database';
 import logger from '@service/logger';
 import { saveProfilePicture, deleteProfilePictureFile } from '@service/file-storage';
 import fs from 'fs';
-import {
-  advisoryLockUser,
-  countActiveSubjectsForUser,
-  isStudentRole,
-  limits,
-} from '@utils/studentQuota';
 
 export const ValidationSchema = {
   body: z.object({
@@ -34,7 +28,6 @@ export const Controller = async (
 ): Promise<void> => {
   const user = req.user;
   const userId = user?.userId;
-  const role = user?.role;
   const banner = req.file;
 
   const { name, description } = req.body;
@@ -56,60 +49,6 @@ export const Controller = async (
       success: false,
       message: 'Subject with this name already exists',
     });
-    return;
-  }
-
-  if (isStudentRole(role)) {
-    await db.query('BEGIN');
-    try {
-      await advisoryLockUser(db, userId!);
-      const subjectCount = await countActiveSubjectsForUser(db, userId!);
-      if (subjectCount >= limits().maxSubjects) {
-        await db.query('ROLLBACK');
-        res.status(400).json({
-          success: false,
-          message: `Students may create at most ${limits().maxSubjects} subjects`,
-        });
-        return;
-      }
-
-      let bannerFileId: string | null = null;
-      if (banner) {
-        savedBannerKey = await saveProfilePicture(banner.filename);
-        const fileRow = await db.queryOne(
-          'INSERT INTO files (key, size, mime_type) VALUES ($1, $2, $3) RETURNING id',
-          [savedBannerKey, banner.size, banner.mimetype]
-        );
-        bannerFileId = fileRow.id;
-      }
-
-      const subject = await db.queryOne(
-        `INSERT INTO subjects (name, description, banner_file_id, created_by)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, name, description, banner_file_id, created_by, created_at, updated_at`,
-        [name, description || null, bannerFileId, userId]
-      );
-
-      await db.query('COMMIT');
-
-      logger.info('Subject created successfully', {
-        subjectId: subject.id,
-        userId,
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Subject created successfully',
-        data: subject,
-      });
-    } catch (err) {
-      await db.query('ROLLBACK');
-      if (savedBannerKey) {
-        await deleteProfilePictureFile(savedBannerKey).catch(() => undefined);
-      }
-      cleanupTemp();
-      throw err;
-    }
     return;
   }
 
