@@ -121,9 +121,7 @@ export const Controller = async (
       f.mime_type AS file_mime_type,
       uni.name AS university_name,
       br.name AS branch_name,
-      (SELECT COUNT(*)::int FROM document_files df_c WHERE df_c.document_id = d.id) AS file_count,
-      (SELECT COALESCE(ROUND(AVG(dr.stars)::numeric, 2), 0) FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_avg,
-      (SELECT COUNT(*)::int FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_count
+      (SELECT COUNT(*)::int FROM document_files df_c WHERE df_c.document_id = d.id) AS file_count
     FROM documents d
     LEFT JOIN subjects s ON d.subject_id = s.id
     LEFT JOIN users u ON d.uploaded_by = u.id

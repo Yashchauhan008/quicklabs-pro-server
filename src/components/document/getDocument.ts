@@ -39,9 +39,7 @@ export const Controller = async (
       u.name as uploader_name,
       u.email as uploader_email,
       uni.name AS university_name,
-      br.name AS branch_name,
-      (SELECT COALESCE(ROUND(AVG(dr.stars)::numeric, 2), 0) FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_avg,
-      (SELECT COUNT(*)::int FROM document_ratings dr WHERE dr.document_id = d.id) AS rating_count
+      br.name AS branch_name
     FROM documents d
     LEFT JOIN subjects s ON d.subject_id = s.id
     LEFT JOIN users u ON d.uploaded_by = u.id

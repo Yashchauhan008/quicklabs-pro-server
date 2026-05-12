@@ -13,11 +13,6 @@ import {
 } from '../components/student/updateProfile';
 
 import {
-  ValidationSchema as RateDocumentValidationSchema,
-  Controller as RateDocumentController,
-} from '../components/rating/rateDocument';
-
-import {
   ValidationSchema as RateStudentValidationSchema,
   Controller as RateStudentController,
 } from '../components/rating/rateStudent';
@@ -86,14 +81,6 @@ router.patch(
   requireRole('student'),
   validate(UpdateProfileValidationSchema),
   WithDatabase(UpdateProfileController)
-);
-
-router.post(
-  '/ratings/documents/:document_id',
-  privateRoute,
-  requireRole('student'),
-  validate(RateDocumentValidationSchema),
-  WithDatabase(RateDocumentController)
 );
 
 router.post(
