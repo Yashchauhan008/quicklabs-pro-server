@@ -30,10 +30,10 @@ export const Controller = async (
       COALESCE(SUM(d.download_count), 0)::int as total_download_count
     FROM subjects s
     LEFT JOIN files bf ON bf.id = s.banner_file_id
-    LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
+    LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL AND (d.visibility = 'PUBLIC' OR d.uploaded_by = $2)
     WHERE s.id = $1 AND s.deleted_at IS NULL
     GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at, bf.key`,
-    [id]
+    [id, req.user?.userId]
   );
 
   if (!subject) {

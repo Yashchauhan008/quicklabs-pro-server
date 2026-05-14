@@ -84,7 +84,7 @@ export const Controller = async (
   }
 
   const attachments = await db.queryMany(
-    `SELECT df.sort_order, df.title, f.key
+    `SELECT df.sort_order, df.title, f.key, f.mime_type
      FROM document_files df
      JOIN files f ON f.id = df.file_id
      WHERE df.document_id = $1
@@ -137,6 +137,23 @@ export const Controller = async (
     'UPDATE documents SET download_count = download_count + 1 WHERE id = $1',
     [id]
   );
+
+  if (attachments.length === 1) {
+    const row = attachments[0];
+    const filePath = getFilePath(row.key as string);
+    const ext = path.extname(path.basename(row.key as string));
+    const stem = slugifyForFilename(row.title || document.title || 'file');
+    const finalFilename = `${stem}${ext}`;
+    const encodedFilename = encodeURIComponent(finalFilename);
+
+    res.setHeader('Content-Type', (row.mime_type as string) || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${finalFilename}"; filename*=UTF-8''${encodedFilename}`
+    );
+    fs.createReadStream(filePath).pipe(res);
+    return;
+  }
 
   const zipBase = slugifyForFilename(document.title as string);
   const asciiFallback = `${zipBase}.zip`;

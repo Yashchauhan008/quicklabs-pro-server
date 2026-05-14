@@ -60,7 +60,10 @@ export const Controller = async (
 
   const totalCount = parseInt(countResult.total, 10);
 
-  params.push(limit, offset);
+  const user = req.user;
+  const userId = user?.userId;
+
+  params.push(limit, offset, userId);
   const subjects = await db.queryMany(
     `SELECT
       s.id,
@@ -74,10 +77,12 @@ export const Controller = async (
       COALESCE(SUM(d.download_count), 0)::int AS total_download_count
     FROM subjects s
     LEFT JOIN files bf ON bf.id = s.banner_file_id
-    LEFT JOIN documents d ON s.id = d.subject_id AND d.deleted_at IS NULL
+    LEFT JOIN documents d ON s.id = d.subject_id 
+      AND d.deleted_at IS NULL 
+      AND (d.visibility = 'PUBLIC' OR d.uploaded_by = $${paramCount + 3})
     WHERE ${whereClause}
     GROUP BY s.id, s.name, s.description, s.created_by, s.created_at, s.updated_at, bf.key
-    ORDER BY s.created_at DESC
+    ORDER BY document_count DESC, s.created_at DESC
     LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`,
     params
   );
