@@ -6,6 +6,7 @@ import privateRoute from '@middleware/auth/privateRoute';
 import imageUpload from '@middleware/multer/imageUpload';
 import { createSubjectRouter } from './subject.route';
 import { createDocumentRouter } from './document.route';
+import { createToolRouter } from './tool.route';
 
 import {
   ValidationSchema as UpdateProfileValidationSchema,
@@ -154,5 +155,6 @@ router.delete(
 
 router.use('/subjects', createSubjectRouter(requireRole('student')));
 router.use('/documents', createDocumentRouter(requireRole('student')));
+router.use('/tools', createToolRouter(requireRole('student')));
 
 export default router;
